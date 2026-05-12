@@ -8,7 +8,7 @@ The solution went through three stages. First - a pipeline on hand-crafted geome
 
 Final pipeline: 50 geometric features + 32 PCA components of the semantic block, classified by a bagging ensemble of 50 $L_2$-regularized logistic regressions. On a 10-seed nested stratified 5-fold CV, the fusion is consistently better than the geometric baseline by +1.87% accuracy (positive delta on all 10 seeds) and has the lowest seed variance (std 0.57%). Through `solution.py` the pipeline gives **test accuracy 75.47%** and **test AUROC 78.68%**.
 
-A manual audit of the top 15 highest-confidence errors showed that in all those cases the dataset label is questionable (prompt leakage, generative collapse, annotator oversight). The probe seems to have hit the label-noise ceiling of the dataset.
+A manual audit of the top 15 highest-confidence errors showed that 4 are correct detections by the probe (the dataset label is wrong), 6 are definitional gray areas (prompt leakage, meta-instructions), 3 are genuine probe mistakes where the model confuses 'I don't know' with hallucination, and 2 are borderline. The probe has reached a mix of label-noise ceiling and a mechanistic limit of representation engineering.
 
 ---
 
@@ -257,7 +257,7 @@ A sweep over `n_estimators` for the bagging classifier on the final fusion archi
 
 Differences are within noise ($\Delta$ AUROC < 0.001). Fixed at `n_estimators=50` as a balance between computation time and variance reduction.
 
-> **Note on hyperparameter inheritance.** The regularization parameter $C$ was not re-tuned via grid search for the final fusion pipeline. It was inherited from prior experiments on a related architecture. Given the dataset size ($N=689$) and observed seed variance ($\pm$0.7-1.5%), additional grid sweeps risk selecting parameters by noise rather than by signal. Spot checks ($C \in \{0.005, 0.05\}$ on the fusion pipeline) showed no significant accuracy difference, so inherited values were kept.
+**Note on hyperparameter inheritance.** The regularization parameter $C$ was not re-tuned via grid search for the final fusion pipeline. It was inherited from prior experiments on a related architecture. Given the dataset size ($N=689$) and observed seed variance ($\pm$0.7-1.5%), additional grid sweeps risk selecting parameters by noise rather than by signal. Spot checks ($C \in \{0.005, 0.05\}$ on the fusion pipeline) showed no significant accuracy difference, so inherited values were kept.
 
 ---
 
@@ -304,17 +304,17 @@ The 15 samples where the fusion probe predicted "hallucination" with the highest
 |:---|:---|:---:|:---:|:---|
 | 193 | Dialog leak: model outputs *"...akrao Assistant: The assistant asked you to compare..."* | 0.95 | 0 | Definitional gray area. Model broke into meta-annotation. Probe flags it as anomaly. |
 | 69 | Instruction leak: *"...Step 5: Write the desired answer..."* | 0.95 | 0 | Definitional gray area. Generating prompt instructions instead of facts. |
-| 244 | Prompt leak: *"...oxetine system You are a helpful assistant.ghest"* | 0.94 | 0 | Probe correct. Complete generation collapse. |
+| 244 | Prompt leak: *"...oxetine system You are a helpful assistant.ghest"* | 0.94 | 0 | **Probe correct**. Complete generation collapse. |
 | 261 | Fact recycling: *"...on group in Egypt and was unable to field candidates..."* | 0.94 | 0 | Borderline. Possibly cyclic repetition of context. |
 | 285 | Self-identification: *"...I'm a chatbot, so I don't ask."* | 0.91 | 0 | **Label correct.** Valid meta-statement, not a hallucination. Probe is confused by lack of factual retrieval. |
 | 674 | Wrong question: *"...completed sentence should be: He said they had asked him..."* | 0.91 | 0 | Definitional gray area. Answering a different question entirely. |
 | 608 | Recursive structure: *"...in their ability to describe and predict the behavior..."* | 0.91 | 0 | Borderline. Formal text, possibly looping. |
 | 677 | Meta-instruction: *"...You solve the task and show how you used the guidelines..."* | 0.90 | 0 | Definitional gray area. Model outputs instructor prompt. |
-| 332 | Prompt leak: *"...You are a helpful assistant.quina quina"* | 0.89 | 0 | Probe correct. System prompt + garbage tokens. |
-| 493 | Nonsense: *"The lobates' conch (auricles) move water currents..."* | 0.88 | 0 | Probe correct. Incoherent biology claim. |
+| 332 | Prompt leak: *"...You are a helpful assistant.quina quina"* | 0.89 | 0 | **Probe correct**. System prompt + garbage tokens. |
+| 493 | Nonsense: *"The lobates' conch (auricles) move water currents..."* | 0.88 | 0 | **Probe correct**. Incoherent biology claim. |
 | 655 | Self-doubt: *"...but others might be plausible given the context provided."* | 0.88 | 0 | **Label correct.** Valid epistemic hedge. Probe conflates uncertainty with hallucination. |
 | 345 | Filler: *"...political developments, social and cultural changes..."* | 0.88 | 0 | **Label correct.** No false facts. Probe flags the lack of parametric retrieval (alignment tax). |
-| 124 | Garbage: *"...'Be good and binkin' Christmas to all that love it. A. I"* | 0.87 | 0 | Probe correct. Complete nonsense. |
+| 124 | Garbage: *"...'Be good and binkin' Christmas to all that love it. A. I"* | 0.87 | 0 | **Probe correct**. Complete nonsense. |
 | 582 | Meta-instruction: *"...Please use proper grammar and formatting..."* | 0.87 | 0 | Definitional gray area. LLM asking itself for grammar. |
 | 479 | Role play: *"...You held up your hand. Assistant: No; no"* | 0.87 | 0 | Definitional gray area. Broke into roleplay. |
 
